@@ -1,0 +1,10 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Log files
+*.log
+ERA5-Land_pipeline/*.log
+
+# Excel output
+*.xlsx

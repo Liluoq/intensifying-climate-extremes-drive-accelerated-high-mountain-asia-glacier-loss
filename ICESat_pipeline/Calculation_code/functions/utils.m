@@ -1,0 +1,112 @@
+function varargout = utils(varargin)
+% UTILS ICESat处理实用工具函数集合
+%
+% 参考：revised_CryoSat2/functions/utils.m
+
+if nargin < 1
+    error('需要指定工具函数名称');
+end
+
+func_name = varargin{1};
+
+switch lower(func_name)
+    case 'customcolormap'
+        if nargin < 3
+            error('customcolormap需要positions和colors参数');
+        end
+        positions = varargin{2};
+        colors = varargin{3};
+        varargout{1} = create_custom_colormap(positions, colors);
+        
+    case 'robust_mean'
+        if nargin < 2
+            error('robust_mean需要data参数');
+        end
+        data = varargin{2};
+        percentile = 1;  % ICESat使用1%百分位（vs CryoSat2的5%）
+        if nargin >= 3
+            percentile = varargin{3};
+        end
+        [varargout{1}, varargout{2}] = compute_robust_mean(data, percentile);
+        
+    case 'median_filter'
+        if nargin < 2
+            error('median_filter需要data参数');
+        end
+        data = varargin{2};
+        threshold = 50;  % ICESat使用50m阈值（vs CryoSat2的75m）
+        if nargin >= 3
+            threshold = varargin{3};
+        end
+        varargout{1} = median_filter(data, threshold);
+        
+    otherwise
+        error('未知的工具函数: %s', func_name);
+end
+
+end
+
+function cmap = create_custom_colormap(positions, colors)
+% CREATE_CUSTOM_COLORMAP 创建自定义颜色映射
+
+if length(positions) ~= size(colors, 1)
+    error('位置向量长度必须与颜色矩阵行数相等');
+end
+
+map_size = 256;
+cmap = zeros(map_size, 3);
+
+for i = 1:3
+    cmap(:, i) = interp1(positions, colors(:, i), linspace(0, 1, map_size));
+end
+
+cmap = max(0, min(1, cmap));
+
+end
+
+function [robust_mean, robust_std] = compute_robust_mean(data, percentile)
+% COMPUTE_ROBUST_MEAN 计算鲁棒平均值
+
+if isempty(data) || all(isnan(data))
+    robust_mean = NaN;
+    robust_std = NaN;
+    return;
+end
+
+valid_data = data(~isnan(data));
+
+if isempty(valid_data)
+    robust_mean = NaN;
+    robust_std = NaN;
+    return;
+end
+
+lower_bound = prctile(valid_data, percentile);
+upper_bound = prctile(valid_data, 100 - percentile);
+
+filtered_data = valid_data(valid_data >= lower_bound & valid_data <= upper_bound);
+
+if isempty(filtered_data)
+    robust_mean = NaN;
+    robust_std = NaN;
+else
+    robust_mean = mean(filtered_data);
+    robust_std = std(filtered_data);
+end
+
+end
+
+function filtered_data = median_filter(data, threshold)
+% MEDIAN_FILTER 基于中位数的异常值过滤
+
+if isempty(data)
+    filtered_data = data;
+    return;
+end
+
+med = median(data, 'omitnan');
+valid_mask = abs(data - med) < threshold;
+filtered_data = data(valid_mask);
+
+end
+

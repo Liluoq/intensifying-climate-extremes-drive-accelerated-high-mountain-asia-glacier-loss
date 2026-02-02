@@ -1,0 +1,31 @@
+{
+  "input_raster_dir": "/WORK/Data/ncc_glacier/era5_land/raw/",
+  "glacier_shapefile": "/WORK/Data/ncc_glacier/glacier_boundary/rgi_hma/rgi_hma.shp",
+  "output_zarr_path": "/WORK/Data/ncc_glacier/era5_land/extracted/glacier_stats.zarr",
+  "variable_names": [
+    "temperature_2m", 
+    "temperature_2m_min", 
+    "temperature_2m_max", 
+    "snowfall_sum", 
+    "total_evaporation_sum", 
+    "total_precipitation_sum", 
+    "surface_net_solar_radiation_sum", 
+    "surface_net_thermal_radiation_sum", 
+    "surface_solar_radiation_downwards_sum", 
+    "surface_thermal_radiation_downwards_sum"
+  ],
+  "stats_operation": "mean",
+  "batch_size": 100,
+  "max_workers": null,
+  "raster_file_pattern": "ERA5-Land_*.tif",
+  "glacier_id_column": "RGIId",
+  "chunk_size_glacier": 1024,
+  "log_file": "extraction_pipeline.log",
+  "monthly_output_xlsx": "/WORK/Data/ncc_glacier/era5_land/extracted/glacier_stats_monthly.xlsx",
+  "monthly_aggregation_log": "/WORK/Data/ncc_glacier/era5_land/extracted/monthly_nan_warnings.log",
+  "extreme_scores_output": "/WORK/Data/ncc_glacier/era5_land/extracted/glacier_extreme_scores.xlsx",
+  "variables_to_aggregate": ["temperature_2m", "total_precipitation_sum"],
+  "extreme_scores_start_date": null,
+  "extreme_scores_end_date": "2025-01"
+}
+
