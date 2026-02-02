@@ -1,35 +1,37 @@
-%% CryoSat-2数据处理详细说明文档
+--- START OF FILE Processing_Documentation.m ---
+
+%% CryoSat-2 Data Processing Detailed Documentation
 %
-% 参考：revised_ICESat2_code/Processing_Documentation.m
-% 本脚本提供CryoSat-2数据处理的技术细节说明
+% Reference: revised_ICESat2_code/Processing_Documentation.m
+% This script provides technical details for CryoSat-2 data processing.
 
-%% 1. 核心技术差异：11×11邻域平均
+%% 1. Core Technical Difference: 11x11 Neighborhood Average
 
-fprintf('=== CryoSat-2关键技术特征 ===\n\n');
+fprintf('=== Key Technical Features of CryoSat-2 ===\n\n');
 
-% 邻域尺寸对比
+% Neighborhood Size Comparison
 neighbor_comparison = [
-    "数据源", "足迹尺寸", "邻域大小", "像元数", "代码";
-    "ICESat-2", "~17m", "3×3", "9", "for j=-1:1; for k=-1:1";
-    "CryoSat-2", "~300m", "11×11", "121", "for j=-5:5; for k=-5:5"
+    "Data Source", "Footprint Size", "Neighborhood Size", "Pixel Count", "Code";
+    "ICESat-2", "~17m", "3x3", "9", "for j=-1:1; for k=-1:1";
+    "CryoSat-2", "~300m", "11x11", "121", "for j=-5:5; for k=-5:5"
 ];
 
-disp('邻域尺寸对比:');
+disp('Neighborhood Size Comparison:');
 disp(neighbor_comparison);
 
-fprintf('\n计算过程:\n');
-fprintf('CryoSat-2足迹: ~300m\n');
-fprintf('NASADEM分辨率: 30m\n');
-fprintf('所需像元数: 300m/30m ≈ 10\n');
-fprintf('邻域尺寸: 11×11（确保覆盖）\n');
-fprintf('总像元数: 11×11 = 121\n\n');
+fprintf('\nCalculation Process:\n');
+fprintf('CryoSat-2 Footprint: ~300m\n');
+fprintf('NASADEM Resolution: 30m\n');
+fprintf('Required Pixels: 300m/30m ≈ 10\n');
+fprintf('Neighborhood Size: 11x11 (to ensure coverage)\n');
+fprintf('Total Pixels: 11x11 = 121\n\n');
 
-%% 2. 代码实现示例
+%% 2. Code Implementation Example
 
-fprintf('=== 11×11邻域平均代码实现 ===\n\n');
+fprintf('=== 11x11 Neighborhood Averaging Code Implementation ===\n\n');
 
-% 模拟示例
-fprintf('示例代码:\n');
+% Simulation Example
+fprintf('Example Code:\n');
 fprintf('-----------------------------------------------------\n');
 fprintf('neighbor_size = 11;\n');
 fprintf('half_size = 5;\n');
@@ -40,165 +42,165 @@ fprintf('    row = ceil(row);\n');
 fprintf('    col = ceil(col);\n');
 fprintf('    \n');
 fprintf('    ele = 0.0;\n');
-fprintf('    for j = -5:5  %% 11个像元\n');
-fprintf('        for k = -5:5  %% 11个像元\n');
+fprintf('    for j = -5:5  %% 11 pixels\n');
+fprintf('        for k = -5:5  %% 11 pixels\n');
 fprintf('            ele = ele + double(srtm(row+j, col+k));\n');
 fprintf('        end\n');
 fprintf('    end\n');
 fprintf('    \n');
-fprintf('    data(i, 23) = ele / 121;  %% 平均\n');
+fprintf('    data(i, 23) = ele / 121;  %% Average\n');
 fprintf('end\n');
 fprintf('-----------------------------------------------------\n\n');
 
-%% 3. 数据格式说明
+%% 3. Data Format Description
 
-fprintf('=== 数据格式说明 ===\n\n');
+fprintf('=== Data Format Description ===\n\n');
 
-% 第一阶段输出格式
+% Phase 1 Output Format
 stage1_format = [
-    "列号", "字段", "说明";
-    "1", "年份", "从文件名提取";
-    "2", "纬度", "WGS84";
-    "3", "经度", "WGS84";
-    "4", "观测高程", "CryoSat-2测高值";
-    "5", "时间", "相对2000-01-01的天数";
-    "6", "大地水准面", "Geoid高度";
-    "7", "地表高程", "elevation - geoid";
-    "8", "HMA22区域", "1-22";
-    "9", "GTN区域", "RGI区域";
-    "10", "0.5°网格", "网格编号";
-    "11", "1°网格", "网格编号";
-    "12", "TP标识", "青藏高原";
-    "13", "冰川标识", "0=冰川，1=非冰川"
+    "Col No", "Field", "Description";
+    "1", "Year", "Extracted from filename";
+    "2", "Latitude", "WGS84";
+    "3", "Longitude", "WGS84";
+    "4", "Obs Elevation", "CryoSat-2 altimetry value";
+    "5", "Time", "Days relative to 2000-01-01";
+    "6", "Geoid", "Geoid Height";
+    "7", "Surface Elev", "elevation - geoid";
+    "8", "HMA22 Region", "1-22";
+    "9", "GTN Region", "RGI Region";
+    "10", "0.5° Grid", "Grid ID";
+    "11", "1° Grid", "Grid ID";
+    "12", "TP Flag", "Tibetan Plateau";
+    "13", "Glacier Flag", "0=Glacier, 1=Non-glacier"
 ];
 
-disp('第一阶段输出格式（HMA_CryoSat2_glacier.txt）:');
+disp('Phase 1 Output Format (HMA_CryoSat2_glacier.txt):');
 disp(stage1_format);
 
-% 第二阶段输出格式
+% Phase 2 Output Format
 stage2_format = [
-    "列号", "字段", "说明";
-    "23", "NASADEM高程", "11×11邻域平均（关键！）";
-    "24", "高程变化", "地表高程 - NASADEM(11×11)"
+    "Col No", "Field", "Description";
+    "23", "NASADEM Elev", "11x11 Neighborhood Average (Key!)";
+    "24", "Elev Change", "Surface Elev - NASADEM(11x11)"
 ];
 
-disp('第二阶段新增列（HMA_CryoSat2_update.txt）:');
+disp('Phase 2 New Columns (HMA_CryoSat2_update.txt):');
 disp(stage2_format);
 
-%% 4. 质量控制策略
+%% 4. Quality Control Strategy
 
-fprintf('\n=== 质量控制策略 ===\n\n');
+fprintf('\n=== Quality Control Strategy ===\n\n');
 
 quality_control_steps = [
-    "步骤", "过滤条件", "阈值";
-    "1. 高程范围", "观测高程", "<8900m";
-    "2. 边界过滤", "HMA边界", "inpolygon";
-    "3. 冰川掩膜", "RGI掩膜", "glacier_flag=0";
-    "4. 高程变化", "abs(dh)", "<400m";
-    "5. 百分位数", "dh范围", "5%-85%";
-    "6. 中位数过滤", "abs(dh-median)", "<75m"
+    "Step", "Filter Condition", "Threshold";
+    "1. Elev Range", "Obs Elevation", "<8900m";
+    "2. Boundary Filter", "HMA Boundary", "inpolygon";
+    "3. Glacier Mask", "RGI Mask", "glacier_flag=0";
+    "4. Elev Change", "abs(dh)", "<400m";
+    "5. Percentile", "dh Range", "5%-85%";
+    "6. Median Filter", "abs(dh-median)", "<75m"
 ];
 
-disp('质量控制步骤:');
+disp('Quality Control Steps:');
 disp(quality_control_steps);
 
-%% 5. 时间处理
+%% 5. Time Processing
 
-fprintf('\n=== 时间处理说明 ===\n\n');
+fprintf('\n=== Time Processing Description ===\n\n');
 
-fprintf('时间参考基准: 2000-01-01\n');
-fprintf('数据时段: 2010-2021\n');
-fprintf('时间单位: 天\n\n');
+fprintf('Time Reference Base: 2000-01-01\n');
+fprintf('Data Period: 2010-2021\n');
+fprintf('Time Unit: Days\n\n');
 
-fprintf('时间转换公式:\n');
-fprintf('  NetCDF时间戳（秒） → 天数:\n');
+fprintf('Time Conversion Formula:\n');
+fprintf('  NetCDF Timestamp (seconds) -> Days:\n');
 fprintf('  days = floor(time_20_ku / 86400)\n\n');
-fprintf('  天数 → 日期:\n');
+fprintf('  Days -> Date:\n');
 fprintf('  date = datetime(2000,1,1) + days(days_value)\n\n');
 
-fprintf('年度时间窗口:\n');
+fprintf('Annual Time Windows:\n');
 for year = 2010:2:2020
     year_start = datenum(year, 1, 1) - datenum(2000, 1, 1);
     year_end = datenum(year+1, 1, 1) - datenum(2000, 1, 1);
-    fprintf('  %d年: 天数 %d - %d\n', year, year_start, year_end);
+    fprintf('  Year %d: Days %d - %d\n', year, year_start, year_end);
 end
 
-%% 6. 统计方法
+%% 6. Statistical Methods
 
-fprintf('\n=== 鲁棒统计方法 ===\n\n');
+fprintf('\n=== Robust Statistical Methods ===\n\n');
 
-fprintf('中位数过滤法:\n');
+fprintf('Median Filter Method:\n');
 fprintf('  med = median(dh);\n');
 fprintf('  valid = abs(dh - med) < 75;\n');
 fprintf('  mean_robust = mean(dh(valid));\n\n');
 
-fprintf('百分位数法:\n');
+fprintf('Percentile Method:\n');
 fprintf('  lower = prctile(dh, 5);\n');
 fprintf('  upper = prctile(dh, 85);\n');
 fprintf('  valid = (dh >= lower) & (dh <= upper);\n');
-fprintf('  保留约88%%的数据\n\n');
+fprintf('  Retain approx 88%% of data\n\n');
 
-%% 7. 与ICESat-2的完整对比
+%% 7. Complete Comparison with ICESat-2
 
-fprintf('=== CryoSat-2 vs ICESat-2 完整对比 ===\n\n');
+fprintf('=== Complete Comparison: CryoSat-2 vs ICESat-2 ===\n\n');
 
 full_comparison = [
-    "特征", "CryoSat-2", "ICESat-2";
-    "测高原理", "雷达高度计", "激光高度计";
-    "足迹尺寸", "~300m", "~17m";
-    "NASADEM邻域", "11×11 (121)", "3×3 (9)";
-    "数据时段", "2010-2021", "2018-2024+";
-    "时间参考", "2000-01-01", "2018-01-01";
-    "轨道重复", "369天", "91天";
-    "穿透深度校正", "不需要", "需要";
-    "数据密度", "较低", "较高";
-    "质量控制", "相对宽松", "相对严格"
+    "Feature", "CryoSat-2", "ICESat-2";
+    "Altimetry Principle", "Radar Altimeter", "Laser Altimeter";
+    "Footprint Size", "~300m", "~17m";
+    "NASADEM Neighborhood", "11x11 (121)", "3x3 (9)";
+    "Data Period", "2010-2021", "2018-2024+";
+    "Time Reference", "2000-01-01", "2018-01-01";
+    "Repeat Cycle", "369 days", "91 days";
+    "Penetration Correction", "Not required", "Required";
+    "Data Density", "Lower", "Higher";
+    "Quality Control", "Relatively loose", "Relatively strict"
 ];
 
 disp(full_comparison);
 
-%% 8. 处理流程图
+%% 8. Processing Flowchart
 
-fprintf('\n=== 数据处理流程 ===\n\n');
+fprintf('\n=== Data Processing Workflow ===\n\n');
 
-fprintf('L2I/TEMPO NetCDF 文件\n');
-fprintf('        ↓\n');
-fprintf('[extract_cryosat2_tracks] - 提取RGI冰川区域\n');
-fprintf('        ↓\n');
+fprintf('L2I/TEMPO NetCDF Files\n');
+fprintf('        |\n');
+fprintf('[extract_cryosat2_tracks] - Extract RGI Glacier Regions\n');
+fprintf('        |\n');
 fprintf('HMA_CryoSat2_glacier.txt\n');
-fprintf('        ↓\n');
-fprintf('[enhance_cryosat2_data] - 11×11邻域NASADEM\n');
-fprintf('        ↓\n');
+fprintf('        |\n');
+fprintf('[enhance_cryosat2_data] - 11x11 Neighborhood NASADEM\n');
+fprintf('        |\n');
 fprintf('HMA_CryoSat2_update.txt\n');
-fprintf('        ↓\n');
+fprintf('        |\n');
 fprintf('[compute_cryosat2_statistics]\n');
-fprintf('        ↓\n');
-fprintf('分析结果（MAT）\n');
-fprintf('        ↓\n');
+fprintf('        |\n');
+fprintf('Analysis Results (MAT)\n');
+fprintf('        |\n');
 fprintf('[generate_cryosat2_plots]\n');
-fprintf('        ↓\n');
-fprintf('图表（PNG/FIG）\n\n');
+fprintf('        |\n');
+fprintf('Charts (PNG/FIG)\n\n');
 
-%% 9. 常见问题
+%% 9. Frequently Asked Questions
 
-fprintf('=== 常见问题解答 ===\n\n');
+fprintf('=== Frequently Asked Questions ===\n\n');
 
-fprintf('Q1: 为什么CryoSat-2用11×11邻域？\n');
-fprintf('A1: 因为CryoSat-2足迹~300m，远大于ICESat-2的~17m，\n');
-fprintf('    需要更大邻域来匹配其空间分辨率。\n\n');
+fprintf('Q1: Why does CryoSat-2 use an 11x11 neighborhood?\n');
+fprintf('A1: Because the CryoSat-2 footprint is ~300m, much larger than ICESat-2 (~17m),\n');
+fprintf('    requiring a larger neighborhood to match its spatial resolution.\n\n');
 
-fprintf('Q2: 能否用3×3邻域处理CryoSat-2？\n');
-fprintf('A2: 不能！会导致空间不匹配，结果不可靠。\n\n');
+fprintf('Q2: Can I use a 3x3 neighborhood for CryoSat-2?\n');
+fprintf('A2: No! This will cause spatial mismatch and unreliable results.\n\n');
 
-fprintf('Q3: NetCDF读取失败怎么办？\n');
-fprintf('A3: 检查变量名是否正确（L2I用_poca_20_ku后缀）。\n\n');
+fprintf('Q3: What if NetCDF reading fails?\n');
+fprintf('A3: Check if variable names are correct (L2I uses _poca_20_ku suffix).\n\n');
 
-fprintf('Q4: 如何验证邻域平均是否正确？\n');
-fprintf('A4: 检查列23的NASADEM值应该是平滑的，\n');
-fprintf('    且与单点NASADEM值接近但更平滑。\n\n');
+fprintf('Q4: How to verify if neighborhood averaging is correct?\n');
+fprintf('A4: Check that NASADEM values in column 23 are smooth,\n');
+fprintf('    and close to single-point NASADEM values but smoother.\n\n');
 
-%% 10. 完成提示
+%% 10. Completion Note
 
-fprintf('=== 文档说明完成 ===\n');
-fprintf('请运行主脚本: CryoSat2_Main_Processing_Pipeline.m\n');
-fprintf('关键记住: 11×11邻域，不是3×3！\n');
+fprintf('=== Documentation Explanation Completed ===\n');
+fprintf('Please run the main script: CryoSat2_Main_Processing_Pipeline.m\n');
+fprintf('Remember key point: 11x11 neighborhood, not 3x3!\n');

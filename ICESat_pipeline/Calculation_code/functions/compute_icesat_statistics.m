@@ -1,36 +1,36 @@
 function results = compute_icesat_statistics(txt_file, config)
-% COMPUTE_ICESAT_STATISTICS ICESat数据统计分析
+% COMPUTE_ICESAT_STATISTICS ICESat data statistical analysis
 %
-% 参考：HMA_ICESat_COMPUTE_20230603.m
+% Reference: HMA_ICESat_COMPUTE_20230603.m
 %
-% 功能：
-%   1. 年度统计（2003-2009，每年10月结束）
-%   2. 3年滑动窗口统计
-%   3. Campaign统计（19个观测窗口）
-%   4. 多区域统计（HMA、15个RGI、22个HMA22、TP、HMA4、HMA6）
+% Functions:
+%   1. Annual statistics (2003–2009, ending in October each year)
+%   2. 3-year moving-window statistics
+%   3. Campaign statistics (19 observation windows)
+%   4. Multi-region statistics (HMA, 15 RGI, 22 HMA22, TP, HMA4, HMA6)
 %
-% 质量控制条件（参考原始代码）：
-%   - 列16 (坡度) <= 40度
-%   - 列9 (glacier_flag) == 0 (冰川内)
-%   - abs(列21 (dh)) < 200 (总体筛选)
-%   - abs(列21 (dh)) < 100 (初步筛选)
-%   - abs(列21 - median) < 50 (精细筛选)
+% Quality-control conditions (following the original code):
+%   - Column 16 (slope) <= 40 degrees
+%   - Column 9 (glacier_flag) == 0 (inside glacier)
+%   - abs(column 21 (dh)) < 200 (overall filter)
+%   - abs(column 21 (dh)) < 100 (initial filter)
+%   - abs(column 21 - median) < 50 (refined filter)
 %
-% 数据列引用（注意：lon在列1，lat在列2）：
-%   - 列5: days (since 2000-01-01)
-%   - 列9: glacier_flag (0=冰川内)
-%   - 列12: hma22_region (HMA22区域编号)
-%   - 列13: gtn_region (GTN15区域编号)
-%   - 列16: slope (3×3邻域)
-%   - 列20: dh (高程变化，不含pdd) ⭐用于统计
-%   - 列21: dh_with_pdd (高程变化，含pdd)
-%   - 列22: HMA4区域编号
-%   - 列23: HMA6区域编号
-%   - 列24: TP标识
+% Column references (note: lon is in column 1, lat in column 2):
+%   - Col 5: days (since 2000-01-01)
+   %   - 列9: glacier_flag (0=冰川内)
+%   - Col12: hma22_region (HMA22 region ID)
+%   - Col13: gtn_region (GTN15 region ID)
+%   - Col16: slope (3×3 neighborhood)
+%   - Col20: dh (elevation change, without PDD) ⭐ used for statistics
+%   - Col21: dh_with_pdd (elevation change, with PDD)
+%   - Col22: HMA4 region ID
+%   - Col23: HMA6 region ID
+%   - Col24: TP flag
 
 fprintf('===ICESat数据统计分析开始===\n');
 
-%% 加载数据
+%% Load data
 fprintf('加载增强数据...\n');
 try
     data = load(txt_file);
@@ -39,43 +39,43 @@ catch ME
     error('数据文件加载失败: %s', ME.message);
 end
 
-%% 加载区域数据
+%% Load region data
 fprintf('加载区域Shape文件...\n');
 HMA22 = shaperead(config.files.hma22_regions);
 rgiregion = shaperead(config.files.gtn_regions);
 glacier_grid = shaperead(config.files.grid10);
 
-%% 数据质量控制
+%% Data quality control
 fprintf('执行质量控制...\n');
 data = apply_quality_control(data, config);
 fprintf('✓ 质量控制后保留 %d 个数据点\n', size(data, 1));
 
-%% 年度统计（2003-2009）
+%% Annual statistics (2003–2009)
 fprintf('计算年度统计...\n');
 results.annual = compute_annual_statistics(data, rgiregion, HMA22, config);
 fprintf('✓ 年度统计完成\n');
 
-%% 3年滑动窗口统计
-fprintf('计算3年滑动窗口统计...\n');
+%% 3-year moving-window statistics
+fprintf('计算3年滑动窗口...\n');
 results.multiyear = compute_multiyear_statistics(data, rgiregion, HMA22, config);
 fprintf('✓ 3年滑动窗口统计完成\n');
 
-%% Campaign统计（19个观测窗口）
+%% Campaign statistics (19 observation windows)
 fprintf('计算Campaign统计...\n');
 results.campaigns = compute_campaign_statistics(data, rgiregion, HMA22, config);
 fprintf('✓ Campaign统计完成\n');
 
-%% 网格统计
+%% Grid statistics
 fprintf('计算网格统计...\n');
 results.grid = compute_grid_statistics(data, glacier_grid, config);
 fprintf('✓ 网格统计完成\n');
 
-%% 高程带分析（季节+年尺度）
+%% Elevation-band analysis (seasonal + annual scales)
 fprintf('执行高程带分析（季节+年尺度）...\n');
 results.elevation_bands = compute_elevation_band_seasonal(data, HMA22, rgiregion, glacier_grid, config);
 fprintf('✓ 季节/年高程带分析完成\n');
 
-%% 面积加权计算
+%% Area-weighted calculations
 fprintf('执行面积加权计算...\n');
 results.area_weighted = compute_area_weighted_analysis(results, config);
 fprintf('✓ 面积加权完成\n');
@@ -91,12 +91,12 @@ fprintf('===ICESat数据统计分析完成===\n');
 end
 
 function data_qc = apply_quality_control(data, config)
-% APPLY_QUALITY_CONTROL 应用质量控制
-% 参考HMA_ICESat_COMPUTE_20230603.m 第48-52行
+% APPLY_QUALITY_CONTROL Apply quality-control filters
+% Reference: HMA_ICESat_COMPUTE_20230603.m, lines 48–52
 
 fprintf('  应用质量控制条件...\n');
 
-% 删除高程变化过大的数据 (>200m)，使用列21 (dh)
+% Remove data with excessively large elevation changes (>200 m), using column 21 (dh)
 todelete = abs(data(:,21)) > config.quality.max_height_change;
 data(todelete,:) = [];
 fprintf('  - 删除极端高程变化数据: %d点\n', sum(todelete));
@@ -106,17 +106,17 @@ data_qc = data;
 end
 
 function annual = compute_annual_statistics(data, rgiregion, HMA22, config)
-% COMPUTE_ANNUAL_STATISTICS 年度统计
-% 参考HMA_ICESat_COMPUTE_20230603.m 第85-172行
+% COMPUTE_ANNUAL_STATISTICS Annual statistics
+% Reference: HMA_ICESat_COMPUTE_20230603.m, lines 85–172
 
 years = config.temporal.start_year:config.temporal.end_year;
 n_years = length(years);
 n_rgi = length(rgiregion);
 n_hma22 = length(HMA22);
 
-% 初始化结果矩阵
-% 列结构: 年份 | 起始day | 结束day | HMA | 15个RGI | 22个HMA22 | TP
-total_cols = 1 + n_rgi + n_hma22 + 1;  % 39列
+% Initialize result matrices
+% Column structure: year | start day | end day | HMA | 15 RGI | 22 HMA22 | TP
+total_cols = 1 + n_rgi + n_hma22 + 1;  % 39 columns
 results_values = nan(n_years, total_cols);
 results_counts = nan(n_years, total_cols);
 results_errors = nan(n_years, total_cols);
@@ -127,7 +127,7 @@ annual.time_windows = zeros(n_years, 2);
 for i = 1:n_years
     year = years(i);
     
-    % 时间范围：从year-01-01到year+1-10-01 (与原代码一致)
+    % Time window: from year-01-01 to (year+1)-10-01 (same as original code)
     start_day = datenum(year, 1, 1) - datenum(2000, 1, 1);
     end_day = datenum(year+1, 10, 1) - datenum(2000, 1, 1);
     
@@ -136,14 +136,14 @@ for i = 1:n_years
     
     col_idx = 1;
     
-    % HMA整体统计
+    % HMA overall statistics
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, [], [], config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
     results_errors(i, col_idx) = err;
     col_idx = col_idx + 1;
     
-    % 15个RGI区域统计
+    % Statistics for 15 RGI regions
     for j = 1:n_rgi
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'rgi', j, config);
         results_values(i, col_idx) = val;
@@ -152,7 +152,7 @@ for i = 1:n_years
         col_idx = col_idx + 1;
     end
     
-    % 22个HMA22区域统计
+    % Statistics for 22 HMA22 regions
     for k = 1:n_hma22
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'hma22', k, config);
         results_values(i, col_idx) = val;
@@ -161,7 +161,7 @@ for i = 1:n_years
         col_idx = col_idx + 1;
     end
     
-    % TP区域统计
+    % TP region statistics
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'tp', 1, config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
@@ -176,16 +176,16 @@ annual.errors = results_errors;
 end
 
 function multiyear = compute_multiyear_statistics(data, rgiregion, HMA22, config)
-% COMPUTE_MULTIYEAR_STATISTICS 3年滑动窗口统计
-% 参考HMA_ICESat_COMPUTE_20230603.m 第174-260行
+% COMPUTE_MULTIYEAR_STATISTICS 3-year moving-window statistics
+% Reference: HMA_ICESat_COMPUTE_20230603.m, lines 174–260
 
 years = config.temporal.start_year:config.temporal.end_year;
 n_years = length(years);
 n_rgi = length(rgiregion);
 n_hma22 = length(HMA22);
 
-% 初始化结果矩阵
-total_cols = 1 + n_rgi + n_hma22 + 1;  % 39列
+% Initialize result matrices
+total_cols = 1 + n_rgi + n_hma22 + 1;  % 39 columns
 results_values = nan(n_years, total_cols);
 results_counts = nan(n_years, total_cols);
 results_errors = nan(n_years, total_cols);
@@ -199,7 +199,7 @@ for i = 1:n_years
     multiyear.year_label(i,1) = year-1;
     multiyear.year_label(i,2) = year+2;
     
-    % 3年窗口：从year-1-01-01到year+2-01-01
+    % 3-year window: from (year-1)-01-01 to (year+2)-01-01
     start_day = datenum(year-1, 1, 1) - datenum(2000, 1, 1);
     end_day = datenum(year+2, 1, 1) - datenum(2000, 1, 1);
     
@@ -208,14 +208,14 @@ for i = 1:n_years
     
     col_idx = 1;
     
-    % HMA整体
+    % HMA overall
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, [], [], config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
     results_errors(i, col_idx) = err;
     col_idx = col_idx + 1;
     
-    % RGI区域
+    % RGI regions
     for k = 1:n_rgi
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'rgi', k, config);
         results_values(i, col_idx) = val;
@@ -224,7 +224,7 @@ for i = 1:n_years
         col_idx = col_idx + 1;
     end
     
-    % HMA22区域
+    % HMA22 regions
     for j = 1:n_hma22
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'hma22', j, config);
         results_values(i, col_idx) = val;
@@ -233,7 +233,7 @@ for i = 1:n_years
         col_idx = col_idx + 1;
     end
     
-    % TP区域
+    % TP region
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'tp', 1, config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
@@ -244,19 +244,19 @@ end
 multiyear.values = results_values;
 multiyear.counts = results_counts;
 multiyear.errors = results_errors;
-multiyear.descrp = '3年滑动窗口';
+multiyear.descrp = '3-year moving window';
 end
 
 function campaigns = compute_campaign_statistics(data, rgiregion, HMA22, config)
-% COMPUTE_CAMPAIGN_STATISTICS Campaign统计（19个观测窗口）
-% 参考HMA_ICESat_COMPUTE_20230603.m 第263-359行
+% COMPUTE_CAMPAIGN_STATISTICS Campaign statistics (19 observation windows)
+% Reference: HMA_ICESat_COMPUTE_20230603.m, lines 263–359
 
 campaign_times = config.temporal.campaigns;
 n_campaigns = size(campaign_times, 1);
 n_rgi = length(rgiregion);
 n_hma22 = length(HMA22);
 
-% 初始化结果矩阵
+% Initialize result matrices
 total_cols = 1 + n_rgi + n_hma22 + 1;
 results_values = nan(n_campaigns, total_cols);
 results_counts = nan(n_campaigns, total_cols);
@@ -278,14 +278,14 @@ for i = 1:n_campaigns
     
     col_idx = 1;
     
-    % HMA整体
+    % HMA overall
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, [], [], config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
     results_errors(i, col_idx) = err;
     col_idx = col_idx + 1;
     
-    % RGI区域
+    % RGI regions
     for k = 1:n_rgi
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'rgi', k, config);
         results_values(i, col_idx) = val;
@@ -294,7 +294,7 @@ for i = 1:n_campaigns
         col_idx = col_idx + 1;
     end
     
-    % HMA22区域
+    % HMA22 regions
     for j = 1:n_hma22
         [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'hma22', j, config);
         results_values(i, col_idx) = val;
@@ -303,7 +303,7 @@ for i = 1:n_campaigns
         col_idx = col_idx + 1;
     end
     
-    % TP区域
+    % TP region
     [val, cnt, err] = compute_region_stats(data, start_day, end_day, 'tp', 1, config);
     results_values(i, col_idx) = val;
     results_counts(i, col_idx) = cnt;
@@ -314,15 +314,15 @@ end
 campaigns.values = results_values;
 campaigns.counts = results_counts;
 campaigns.errors = results_errors;
-campaigns.descrp = 'Campaign结果';
+campaigns.descrp = 'Campaign results';
 
 end
 
 function grid_results = compute_grid_statistics(data, glacier_grid, config)
-% COMPUTE_GRID_STATISTICS 网格统计
+% COMPUTE_GRID_STATISTICS Grid-based statistics
 %
-% 参考：compute_cryosat2_statistics.m 的 compute_grid_statistics
-% 使用列5(days)、列14(grid_region)、列16(slope)、列20(dh)
+% Reference: compute_cryosat2_statistics.m, function compute_grid_statistics
+% Uses columns 5 (days), 14 (grid_region), 16 (slope), 20 (dh)
 
 fprintf('  开始网格统计（3年和1年窗口）...\n');
 
@@ -338,7 +338,7 @@ grid_results.values_1yr = nan(num_periods, num_grids);
 grid_results.counts_1yr = nan(num_periods, num_grids);
 grid_results.errors_1yr = nan(num_periods, num_grids);
 
-% 网格元数据
+% Grid metadata
 for i = 1:num_grids
     grid_results.metadata(i,1) = glacier_grid(i).id;
     grid_results.metadata(i,2) = glacier_grid(i).x;
@@ -348,9 +348,9 @@ end
 
 grid_results.year_label = [config.temporal.start_year:config.temporal.end_year]';
 
-% 3年窗口统计
+% 3-year window statistics
 for i = 1:num_grids
-    grid_mask = (data(:,14) == i) & (data(:,16) <= 40);  % 列14是grid_region，列16是slope
+    grid_mask = (data(:,14) == i) & (data(:,16) <= 40);  % Col14 is grid_region, Col16 is slope
     
     for j = config.temporal.start_year:config.temporal.end_year
         start_day = datenum(j-1, 1, 1) - datenum(2000, 1, 1);
@@ -364,7 +364,7 @@ for i = 1:num_grids
         grid_results.errors_3yr(j-config.temporal.start_year+1, i) = err;
     end
     
-    % 1年窗口统计
+    % 1-year window statistics
     for j = config.temporal.start_year:config.temporal.end_year
         start_day = datenum(j, 1, 1) - datenum(2000, 1, 1);
         end_day = datenum(j + 1, 1, 1) - datenum(2000, 1, 1);
@@ -378,24 +378,25 @@ for i = 1:num_grids
     end
 end
 
-grid_results.descrp = '网格尺度结果';
+grid_results.descrp = 'Grid-scale results';
 
 end
 
 function elevation_seasonal = compute_elevation_band_seasonal(data, HMA22, rgiregion, glacier_grid, config)
-% COMPUTE_ELEVATION_BAND_SEASONAL 高程带×季节×区域分析
+% COMPUTE_ELEVATION_BAND_SEASONAL Elevation-band × season × region analysis
 %
-% 参考：compute_cryosat2_statistics.m 的 compute_elevation_band_seasonal
-% 使用列5(days)、列12(hma22)、列13(gtn)、列14(grid)、列15(nasadem)、列16(slope)、列21(dh)、列24(TP)
+% Reference: compute_cryosat2_statistics.m, function compute_elevation_band_seasonal
+% Uses columns 5 (days), 12 (hma22), 13 (gtn), 14 (grid), 15 (nasadem),
+% 16 (slope), 21 (dh), 24 (TP)
 
 fprintf('  计算季节高程带（基于campaigns）...\n');
 
-% ICESat使用campaigns作为时间窗口（19个观测窗口）
+% ICESat uses campaigns as time windows (19 observation windows)
 campaign_times = config.temporal.campaigns;
 n_periods = size(campaign_times, 1);
 
 n_bands = (config.spatial.elevation_range(2) - config.spatial.elevation_range(1))/config.spatial.elevation_band_width + 1;
-n_regions = 39 + 496;  % HMA + 15个RGI + 22个HMA22 + TP + 496个grid
+n_regions = 39 + 496;  % HMA + 15 RGI + 22 HMA22 + TP + 496 grid cells
 
 elevation_seasonal = struct();
 elevation_seasonal.values = nan(n_bands, n_regions, n_periods);
@@ -406,15 +407,15 @@ elevation_seasonal.time_windows = campaign_times;
 elevation_seasonal.mid_date = datetime(2000,1,1) + days(floor((campaign_times(:,2) + campaign_times(:,3))/2));
 elevation_seasonal.date_windows(:,1) = datetime(2000,1,1) + days(campaign_times(:,2));
 elevation_seasonal.date_windows(:,2) = datetime(2000,1,1) + days(campaign_times(:,3));
-elevation_seasonal.descrp = '高度带结果（基于campaigns）';
+elevation_seasonal.descrp = 'Elevation-band results (based on campaigns)';
 
 half_band_width = config.spatial.elevation_band_width / 2;
 
-% HMA整体
+% HMA overall
 for i = 1:n_periods
     time_mask = (data(:,5) >= campaign_times(i,2)) & ...
                 (data(:,5) < campaign_times(i,3)) & ...
-                (data(:,16) < 40) & (abs(data(:,21)) < 100);  % 列16:slope, 列21:dh
+                (data(:,16) < 40) & (abs(data(:,21)) < 100);  % Col16: slope, Col21: dh
     
     for k = 1:n_bands
         elev_center = elevation_seasonal.elevation_centers(k);
@@ -429,7 +430,7 @@ for i = 1:n_periods
     end
 end
 
-% RGI区域（列13）
+% RGI regions (column 13)
 if ~isempty(rgiregion)
     for j = 1:length(rgiregion)
         region_mask = (data(:,13) == j) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
@@ -453,7 +454,7 @@ if ~isempty(rgiregion)
     end
 end
 
-% HMA22区域（列12）
+% HMA22 regions (column 12)
 if ~isempty(HMA22)
     for j = 1:length(HMA22)
         region_mask = (data(:,12) == j) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
@@ -477,7 +478,7 @@ if ~isempty(HMA22)
     end
 end
 
-% TP（列24）
+% TP (column 24)
 tp_mask = (data(:,24) == 1) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
 data1 = data(tp_mask, :);
 if ~isempty(data1)
@@ -498,7 +499,7 @@ if ~isempty(data1)
     end
 end
 
-% Grid496（列14）
+% Grid496 (column 14)
 for j = 1:length(glacier_grid)
     region_mask = (data(:,14) == j) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
     data1 = data(region_mask, :);
@@ -524,24 +525,24 @@ for j = 1:length(glacier_grid)
     end
 end
 
-% 年尺度高程带（使用年度窗口）
+% Elevation bands on annual scales (using annual windows)
 fprintf('  计算年尺度高程带...\n');
 
-% 年窗口（3年）
+% Annual windows (3-year)
 years = [2003:year(config.time.end_date);
         2004:year(config.time.end_date)+1];
-% 两年期窗口
+% Two-year windows
 two_year_windows = [2003:year(config.time.end_date)-1;
                     2005:year(config.time.end_date)+1];
-% 三年期窗口
+% Three-year windows
 three_year_windows = [2003:year(config.time.end_date)-2;
                     2006:year(config.time.end_date)+1];
 whole_window = [2003;year(config.time.end_date)+1];
 ref_date = config.time.reference_date;
-% 组合所有年度窗口
+% Combine all annual windows
 all_windows = [years, two_year_windows, three_year_windows, whole_window];
 
-% 转换为相对天数
+% Convert to days relative to reference date
 year_windows = zeros(size(all_windows, 2), 2);
 for i = 1:size(all_windows, 2)
     year_windows(i, 1) = daysact(ref_date, datetime(all_windows(1, i), 1, 1));
@@ -553,7 +554,7 @@ elevation_seasonal.values_year = nan(n_bands, n_regions, n_year_periods);
 elevation_seasonal.counts_year = nan(n_bands, n_regions, n_year_periods);
 elevation_seasonal.errors_year = nan(n_bands, n_regions, n_year_periods);
 
-% HMA整体
+% HMA overall
 for i = 1:n_year_periods
     time_mask = (data(:,5) >= year_windows(i,1)) & ...
                 (data(:,5) < year_windows(i,2)) & ...
@@ -572,7 +573,7 @@ for i = 1:n_year_periods
     end
 end
 
-% RGI区域
+% RGI regions
 for j = 1:length(rgiregion)
     region_mask = (data(:,13) == j) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
     data1 = data(region_mask, :);
@@ -594,7 +595,7 @@ for j = 1:length(rgiregion)
     end
 end
 
-% HMA22区域
+% HMA22 regions
 for j = 1:length(HMA22)
     region_mask = (data(:,12) == j) & (data(:,16) < 40) & (abs(data(:,21)) < 100);
     data1 = data(region_mask, :);

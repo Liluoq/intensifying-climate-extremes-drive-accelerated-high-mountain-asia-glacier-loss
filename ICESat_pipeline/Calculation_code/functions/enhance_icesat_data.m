@@ -1,49 +1,49 @@
 function enhanced_data = enhance_icesat_data(txt_file, config)
-% ENHANCE_ICESAT_DATA 增强ICESat数据，添加地形信息
+% ENHANCE_ICESAT_DATA Enhance ICESat data by adding terrain information
 %
-% 关键差异：ICESat使用3×3邻域平均NASADEM（vs CryoSat-2的11×11）
-% 参考：HMA_footprint_track_20230213.m 第3-28行
+% Key difference: ICESat uses a 3×3 neighborhood mean of NASADEM (vs CryoSat-2's 11×11)
+% Reference: HMA_footprint_track_20230213.m, lines 3–28
 %
-% 功能：
-%   1. 提取地形参数（3×3邻域）：NASADEM、slope、aspect
-%   2. 计算h_li2000（WGS84高程）
-%   3. 添加pdd校正
-%   4. 计算高程变化（dh和dh_with_pdd）
-%   5. 添加HMA4、HMA6、TP区域标识
+% Functions:
+%   1. Extract terrain parameters (3×3 neighborhood): NASADEM, slope, aspect
+%   2. Compute h_li2000 (WGS84 elevation)
+%   3. Add PDD correction
+%   4. Compute elevation change (dh and dh_with_pdd)
+%   5. Add HMA4, HMA6, and TP region identifiers
 %
-% ICESat数据列定义（输入14列，注意lon在前lat在后）:
-% 列1: lon (经度)
-% 列2: lat (纬度)
-% 列3: elevation (观测高程)
-% 列4: beam_azimuth (波束方位角)
-% 列5: days (天数，since 2000-01-01)
-% 列6: geoid (EGM96大地水准面)
-% 列7: satcorr (卫星高程校正)
-% 列8: satflag (卫星校正标识)
-% 列9: glacier_flag (冰川标识, 0=冰川内)
-% 列10: year (年份)
-% 列11: hma_region (HMA区域编号)
-% 列12: hma22_region (HMA22区域编号)
-% 列13: gtn_region (GTN15区域编号)
-% 列14: grid_region (grid496区域编号)
+% ICESat data column definitions (input has 14 columns, note lon is before lat):
+% Col 1: lon (longitude)
+% Col 2: lat (latitude)
+% Col 3: elevation (observed elevation)
+% Col 4: beam_azimuth (beam azimuth)
+% Col 5: days (days since 2000-01-01)
+% Col 6: geoid (EGM96 geoid height)
+% Col 7: satcorr (satellite elevation correction)
+% Col 8: satflag (satellite correction flag)
+% Col 9: glacier_flag (glacier flag, 0 = inside glacier)
+% Col10: year
+% Col11: hma_region (HMA region ID)
+% Col12: hma22_region (HMA22 region ID)
+% Col13: gtn_region (GTN15 region ID)
+% Col14: grid_region (grid496 region ID)
 %
-% 输出（扩展到24列）:
-% 列15: nasadem (3×3邻域平均) ⭐
-% 列16: slope (3×3邻域平均)
-% 列17: aspect (3×3邻域平均)
-% 列18: pdd_corr (PDD校正值)
-% 列19: h_li2000 (WGS84高程，校正后)
-% 列20: dh = h_li2000 - nasadem ⭐用于统计
-% 列21: dh_with_pdd = h_li2000 - nasadem - pdd
-% 列22: HMA4区域ID
-% 列23: HMA6区域ID（季节模式）
-% 列24: TP标识
+% Output (expanded to 24 columns):
+% Col15: nasadem (3×3 neighborhood mean) ⭐
+% Col16: slope (3×3 neighborhood mean)
+% Col17: aspect (3×3 neighborhood mean)
+% Col18: pdd_corr (PDD correction value)
+% Col19: h_li2000 (WGS84 elevation, corrected)
+% Col20: dh = h_li2000 - nasadem ⭐ used for statistics
+% Col21: dh_with_pdd = h_li2000 - nasadem - pdd
+% Col22: HMA4 region ID
+% Col23: HMA6 region ID (seasonal pattern)
+% Col24: TP flag
 
 fprintf('开始ICESat数据增强处理...\n');
 warning('off', 'MATLAB:polyshape:repairedBySimplify');
 warning('off', 'map:removing:latlon2pix');
 
-%% 加载数据
+%% Load data
 fprintf('加载数据文件...\n');
 try
     data = load(txt_file);
@@ -52,14 +52,14 @@ catch ME
     error('数据文件加载失败: %s', ME.message);
 end
 
-%% 加载地形数据
+%% Load terrain data
 fprintf('加载地形数据...\n');
 try
     [nasadem, ref_nasadem] = geotiffread(config.files.nasadem);
     [slope_data, ref_slope] = geotiffread(config.files.slope);
     [aspect_data, ref_aspect] = geotiffread(config.files.aspect);
     
-    % 加载区域数据
+    % Load region data
     glacier_grid = shaperead(config.files.grid10);
     HMA4 = shaperead(config.files.hma4_regions);
     HMA6 = shaperead(config.files.hma6_regions);
@@ -70,19 +70,19 @@ catch ME
     error('地形数据加载失败: %s', ME.message);
 end
 
-%% 添加地形参数（3×3邻域平均）
+%% Add terrain parameters (3×3 neighborhood mean)
 fprintf('添加地形参数（3×3邻域）：NASADEM、slope、aspect...\n');
 enhanced_data = add_terrain_parameters_3x3(data, nasadem, ref_nasadem, slope_data, ref_slope, aspect_data, ref_aspect, config);
 
-%% 计算h_li2000和高程变化
+%% Compute h_li2000 and elevation change
 fprintf('计算h_li2000和高程变化...\n');
 enhanced_data = calculate_h_li2000_and_dh(enhanced_data);
 
-%% 添加pdd校正并计算dh_with_pdd
+%% Add PDD correction and compute dh_with_pdd
 fprintf('添加pdd校正并计算dh_with_pdd...\n');
 enhanced_data = add_pdd_and_calculate_dh_with_pdd(enhanced_data, glacier_grid);
 
-%% 添加区域标识
+%% Add region identifiers
 fprintf('添加区域标识（HMA4, HMA6, TP）...\n');
 enhanced_data = add_region_identifiers(enhanced_data, HMA4, HMA6, TP);
 
@@ -91,23 +91,23 @@ fprintf('✓ 数据增强完成，输出 %d 个数据点\n', size(enhanced_data,
 end
 
 function enhanced_data = add_terrain_parameters_3x3(data, nasadem, ref_nasadem, slope_data, ref_slope, aspect_data, ref_aspect, config)
-% ADD_TERRAIN_PARAMETERS_3X3 添加地形参数（3×3邻域平均）
+% ADD_TERRAIN_PARAMETERS_3X3 Add terrain parameters (3×3 neighborhood mean)
 %
-% 这是ICESat与CryoSat-2的关键差异！
-% ICESat:    3×3邻域（9个像元）
-% CryoSat-2: 11×11邻域（121个像元）
+% This is the key difference between ICESat and CryoSat-2!
+% ICESat:    3×3 neighborhood (9 pixels)
+% CryoSat-2: 11×11 neighborhood (121 pixels)
 %
-% 原因：ICESat足迹尺寸~70m，小于CryoSat-2的~300m
+% Reason: ICESat footprint size is ~70 m, smaller than CryoSat-2's ~300 m
 %
-% 输出：
-% 列15: nasadem (3×3邻域)
-% 列16: slope (3×3邻域)
-% 列17: aspect (3×3邻域)
+% Output:
+% Col15: nasadem (3×3 neighborhood)
+% Col16: slope (3×3 neighborhood)
+% Col17: aspect (3×3 neighborhood)
 
 neighbor_size = config.spatial.nasadem_neighbor_size;  % 3
 half_size = floor(neighbor_size / 2);  % 1
 
-% 扩展数据矩阵
+% Extend data matrix
 enhanced_data = data;
 if size(enhanced_data, 2) < 17
     enhanced_data(:, 15) = nan;  % nasadem
@@ -119,18 +119,18 @@ fprintf('  使用%d×%d邻域平均（%d个像元）...\n', ...
     neighbor_size, neighbor_size, neighbor_size^2);
 
 for i = 1:size(data, 1)
-    % 获取像元坐标（注意：lon在列1，lat在列2）
+    % Get pixel coordinates (note: lon is in column 1, lat is in column 2)
     [row, col] = latlon2pix(ref_nasadem, data(i, 2), data(i, 1));
     row = ceil(row);
     col = ceil(col);
     
-    % 检查边界
+    % Check boundaries
     if row <= half_size || row > size(nasadem, 1) - half_size || ...
        col <= half_size || col > size(nasadem, 2) - half_size
         continue;
     end
     
-    % 3×3邻域平均 - NASADEM
+    % 3×3 neighborhood mean - NASADEM
     ele_sum = [];
     slope_sum = [];
     aspect_sum = [];
@@ -147,7 +147,7 @@ for i = 1:size(data, 1)
     enhanced_data(i, 16) = nanmean(slope_sum);    % slope
     enhanced_data(i, 17) = nanmean(aspect_sum);   % aspect
     
-    % 显示进度
+    % Show progress
     if mod(i, 100000) == 0
         fprintf('  处理进度: %d/%d (%.1f%%)\n', i, size(data, 1), 100*i/size(data,1));
     end
@@ -158,11 +158,11 @@ fprintf('✓ 地形参数（3×3邻域）添加完成\n');
 end
 
 function enhanced_data = calculate_h_li2000_and_dh(data)
-% CALCULATE_H_LI2000_AND_DH 计算h_li2000和高程变化
+% CALCULATE_H_LI2000_AND_DH Compute h_li2000 and elevation change
 %
-% 输出：
-% 列19: h_li2000 (WGS84高程)
-% 列20: dh = h_li2000 - nasadem
+% Output:
+% Col19: h_li2000 (WGS84 elevation)
+% Col20: dh = h_li2000 - nasadem
 
 enhanced_data = data;
 if size(enhanced_data, 2) < 20
@@ -171,7 +171,7 @@ if size(enhanced_data, 2) < 20
 end
 
 for i = 1:size(data, 1)
-    % 计算h_li2000（参考HMA_Icesattrack_full.m）
+    % Compute h_li2000 (see HMA_Icesattrack_full.m)
     latitude = enhanced_data(i, 2);
     offset = 0.8337-0.3848*(sind(latitude))^2;
     if data(i, 8) == 2  % satflag
@@ -180,7 +180,7 @@ for i = 1:size(data, 1)
         enhanced_data(i, 19) = data(i, 3) - data(i, 6) - offset;
     end
     
-    % 计算dh = h_li2000 - nasadem,不考虑pdd
+    % Compute dh = h_li2000 - nasadem, without considering PDD
     enhanced_data(i, 20) = enhanced_data(i, 19) - data(i, 15);
 end
 
@@ -189,11 +189,11 @@ fprintf('✓ h_li2000和dh计算完成\n');
 end
 
 function enhanced_data = add_pdd_and_calculate_dh_with_pdd(data, glacier_grid)
-% ADD_PDD_AND_CALCULATE_DH_WITH_PDD 添加pdd校正并计算dh_with_pdd
+% ADD_PDD_AND_CALCULATE_DH_WITH_PDD Add PDD correction and compute dh_with_pdd
 %
-% 输出：
-% 列18: pdd_corr (从grid_region获取)
-% 列21: dh_with_pdd = h_li2000 - nasadem - pdd
+% Output:
+% Col18: pdd_corr (obtained from grid_region)
+% Col21: dh_with_pdd = h_li2000 - nasadem - pdd
 
 enhanced_data = data;
 if size(enhanced_data, 2) < 21
@@ -201,7 +201,7 @@ if size(enhanced_data, 2) < 21
     enhanced_data(:, 21) = nan;  % dh_with_pdd
 end
 
-% 根据列14 (grid_region)获取pdd校正值
+% Obtain PDD correction value from column 14 (grid_region)
 for i = 1:size(data, 1)
     grid_id = data(i, 14);
     if ~isnan(grid_id) && grid_id > 0 && grid_id <= length(glacier_grid)
@@ -209,7 +209,7 @@ for i = 1:size(data, 1)
     end
 end
 
-% 计算dh_with_pdd = h_li2000 - nasadem - pdd
+% Compute dh_with_pdd = h_li2000 - nasadem - pdd
 enhanced_data(:, 21) = data(:, 19) - data(:, 15) - enhanced_data(:, 18);
 
 fprintf('✓ pdd校正和dh_with_pdd计算完成\n');
@@ -217,10 +217,10 @@ fprintf('✓ pdd校正和dh_with_pdd计算完成\n');
 end
 
 function enhanced_data = add_region_identifiers(data, HMA4, HMA6, TP)
-% ADD_REGION_IDENTIFIERS 添加区域标识
-% 列22: HMA4区域ID
-% 列23: HMA6区域ID（季节模式）
-% 列24: TP标识
+% ADD_REGION_IDENTIFIERS Add region identifiers
+% Col22: HMA4 region ID
+% Col23: HMA6 region ID (seasonal pattern)
+% Col24: TP flag
 
 enhanced_data = data;
 if size(enhanced_data, 2) < 24
@@ -229,19 +229,19 @@ if size(enhanced_data, 2) < 24
     enhanced_data(:, 24) = 0;
 end
 
-% 添加HMA4区域标识（注意：lon在列1，lat在列2）
+% Add HMA4 region identifiers (note: lon is in column 1, lat is in column 2)
 for k = 1:length(HMA4)
     [in, ~] = inpolygon(data(:,1), data(:,2), HMA4(k).X, HMA4(k).Y);
     enhanced_data(in==1, 22) = k;
 end
 
-% 添加HMA6季节模式区域标识
+% Add HMA6 seasonal-pattern region identifiers
 for k = 1:length(HMA6)
     [in, ~] = inpolygon(data(:,1), data(:,2), HMA6(k).X, HMA6(k).Y);
     enhanced_data(in==1, 23) = k;
 end
 
-% 添加TP标识
+% Add TP flag
 [in, ~] = inpolygon(data(:,1), data(:,2), TP.X, TP.Y);
 enhanced_data(in==1, 24) = 1;
 

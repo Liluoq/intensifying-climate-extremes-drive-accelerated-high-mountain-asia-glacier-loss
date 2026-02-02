@@ -1,7 +1,7 @@
 function varargout = utils(varargin)
-% UTILS ICESat处理实用工具函数集合
+% UTILS Utility function collection for ICESat processing
 %
-% 参考：revised_CryoSat2/functions/utils.m
+% Reference: revised_CryoSat2/functions/utils.m
 
 if nargin < 1
     error('需要指定工具函数名称');
@@ -23,7 +23,7 @@ switch lower(func_name)
             error('robust_mean需要data参数');
         end
         data = varargin{2};
-        percentile = 1;  % ICESat使用1%百分位（vs CryoSat2的5%）
+        percentile = 1;  % ICESat uses 1% percentile (vs CryoSat2 using 5%)
         if nargin >= 3
             percentile = varargin{3};
         end
@@ -34,7 +34,7 @@ switch lower(func_name)
             error('median_filter需要data参数');
         end
         data = varargin{2};
-        threshold = 50;  % ICESat使用50m阈值（vs CryoSat2的75m）
+        threshold = 50;  % ICESat uses a 50 m threshold (vs 75 m for CryoSat2)
         if nargin >= 3
             threshold = varargin{3};
         end
@@ -47,7 +47,7 @@ end
 end
 
 function cmap = create_custom_colormap(positions, colors)
-% CREATE_CUSTOM_COLORMAP 创建自定义颜色映射
+% CREATE_CUSTOM_COLORMAP Create a custom color map
 
 if length(positions) ~= size(colors, 1)
     error('位置向量长度必须与颜色矩阵行数相等');
@@ -65,7 +65,7 @@ cmap = max(0, min(1, cmap));
 end
 
 function [robust_mean, robust_std] = compute_robust_mean(data, percentile)
-% COMPUTE_ROBUST_MEAN 计算鲁棒平均值
+% COMPUTE_ROBUST_MEAN Compute a robust mean
 
 if isempty(data) || all(isnan(data))
     robust_mean = NaN;
@@ -97,7 +97,7 @@ end
 end
 
 function filtered_data = median_filter(data, threshold)
-% MEDIAN_FILTER 基于中位数的异常值过滤
+% MEDIAN_FILTER Outlier filtering based on the median
 
 if isempty(data)
     filtered_data = data;

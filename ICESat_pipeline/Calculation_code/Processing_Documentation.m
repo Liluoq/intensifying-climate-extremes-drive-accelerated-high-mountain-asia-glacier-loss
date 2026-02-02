@@ -1,112 +1,112 @@
-%% ICESat数据处理流程文档
+%% ICESat Data Processing Workflow Documentation
 %
-% 本文档详细说明ICESat数据处理的完整流程
-% 参考：revised_CryoSat2/Processing_Documentation.m
+% This document describes the complete ICESat data processing workflow in detail.
+% Reference: revised_CryoSat2/Processing_Documentation.m
 %
-% 创建日期：2025-10-18
-% 版本：v1.0
+% Creation date: 2025-10-18
+% Version: v1.0
 
 %% ========================================================================
-%  一、数据概述
+%  I. Data Overview
 %  ========================================================================
 
 % ICESat (Ice, Cloud, and land Elevation Satellite)
-% - 发射时间：2003年1月
-% - 终止时间：2009年10月
-% - 激光测高系统：GLAS (Geoscience Laser Altimeter System)
-% - 数据产品：GLA14 (L2 Global Land Surface Altimetry Data)
-% - 足迹尺寸：~70m
-% - 沿轨间距：~170m
-% - 重访周期：91天（理论）
+% - Launch date: January 2003
+% - End of mission: October 2009
+% - Laser altimetry system: GLAS (Geoscience Laser Altimeter System)
+% - Data product: GLA14 (L2 Global Land Surface Altimetry Data)
+% - Footprint size: ~70 m
+% - Along-track spacing: ~170 m
+% - Repeat cycle: 91 days (theoretical)
 
 %% ========================================================================
-%  二、数据特点
+%  II. Data Characteristics
 %  ========================================================================
 
-% 1. 时间特点
-%    - 不连续观测：19个campaigns
-%    - 每个campaign持续约1-4个月
-%    - 两个campaigns之间间隔数月
+% 1. Temporal characteristics
+%    - Discontinuous observations: 19 campaigns
+%    - Each campaign lasts about 1–4 months
+%    - Several months gap between campaigns
 %
-% 2. 空间特点
-%    - 足迹小（~70m）→ 高空间分辨率
-%    - 轨道间距大 → 空间覆盖有限
-%    - 适合冰川高程变化监测
+% 2. Spatial characteristics
+%    - Small footprint (~70 m) → high spatial resolution
+%    - Large track spacing → limited spatial coverage
+%    - Suitable for monitoring glacier elevation changes
 %
-% 3. 质量控制
-%    - Cloud flag：必须为0（无云）
-%    - Saturation：<=255
-%    - 坡度：<=40度
-%    - 曲率：abs < 4
+% 3. Quality control
+%    - Cloud flag: must be 0 (cloud-free)
+%    - Saturation: <= 255
+%    - Slope: <= 40 degrees
+%    - Curvature: abs < 4
 
 %% ========================================================================
-%  三、与CryoSat-2的关键差异
+%  III. Key Differences Compared to CryoSat-2
 %  ========================================================================
 
 % +------------------+------------------+------------------+
-% | 项目             | ICESat          | CryoSat-2        |
+% | Item             | ICESat           | CryoSat-2        |
 % +------------------+------------------+------------------+
-% | 时间范围         | 2003-2009       | 2010-2025        |
-% | 足迹尺寸         | ~70m            | ~300m            |
-% | NASADEM邻域      | 3×3 (9像元)     | 11×11 (121像元)  |
-% | 观测模式         | 19个campaigns   | 连续观测         |
-% | 数据格式         | HDF5            | NetCDF           |
-% | 经纬度列顺序     | lat(1), lon(2)  | lon(1), lat(2)   |
+% | Time span        | 2003-2009        | 2010-2025        |
+% | Footprint size   | ~70m             | ~300m            |
+% | NASADEM window   | 3×3 (9 pixels)   | 11×11 (121 pixels)|
+% | Observation mode | 19 campaigns     | Continuous        |
+% | Data format      | HDF5             | NetCDF            |
+% | Lon/Lat order    | lat(1), lon(2)   | lon(1), lat(2)    |
 % +------------------+------------------+------------------+
 
 %% ========================================================================
-%  四、处理流程
+%  IV. Processing Workflow
 %  ========================================================================
 
-% 阶段1：数据提取（可选）
+% Stage 1: Data extraction (optional)
 % ┌─────────────────────┐
-% │ GLA14 HDF文件       │
+% │ GLA14 HDF files     │
 % └──────────┬──────────┘
 %            │ extract_icesat_tracks.m
 %            ↓
 % ┌─────────────────────┐
-% │ 原始TXT（约20列）   │ HMA_ICESat_rgiregion.txt
+% │ Raw TXT (~20 columns)   │ HMA_ICESat_rgiregion.txt
 % └──────────┬──────────┘
 %
-% 阶段2：数据增强
+% Stage 2: Data enhancement
 %            │ enhance_icesat_data.m
-%            ├─→ 添加NASADEM（3×3邻域）
-%            ├─→ 添加网格和pdd
-%            ├─→ 添加区域标识
-%            ├─→ 计算高程变化
+%            ├─→ Add NASADEM (3×3 neighborhood)
+%            ├─→ Add grid and PDD
+%            ├─→ Add region identifiers
+%            ├─→ Compute elevation change
 %            ↓
 % ┌─────────────────────┐
-% │ 增强TXT（28列）     │ HMA_ICESAT_rgiregion_update.txt
+% │ Enhanced TXT (28 columns)     │ HMA_ICESAT_rgiregion_update.txt
 % └──────────┬──────────┘
 %
-% 阶段3：统计分析
+% Stage 3: Statistical analysis
 %            │ compute_icesat_statistics.m
-%            ├─→ 年度统计（2003-2009）
-%            ├─→ 3年滑动窗口
-%            ├─→ Campaign统计（19个）
+%            ├─→ Annual statistics (2003-2009)
+%            ├─→ 3-year moving windows
+%            ├─→ Campaign statistics (19 windows)
 %            ↓
 % ┌─────────────────────┐
-% │ 统计结果（MAT+Excel)│
+% │ Statistical results (MAT+Excel)│
 % └─────────────────────┘
 
 %% ========================================================================
-%  五、核心技术：3×3邻域平均
+%  V. Core Technique: 3×3 Neighborhood Mean
 %  ========================================================================
 
-% 为什么ICESat使用3×3邻域？
+% Why does ICESat use a 3×3 neighborhood?
 %
-% 1. 足迹匹配
-%    - ICESat足迹直径 ~70m
-%    - NASADEM分辨率 30m
-%    - 3×3邻域 = 90m × 90m ≈ 足迹范围
+% 1. Footprint matching
+%    - ICESat footprint diameter ~70 m
+%    - NASADEM resolution 30 m
+%    - 3×3 neighborhood = 90 m × 90 m ≈ footprint area
 %
-% 2. 空间代表性
-%    - 足迹内地形起伏
-%    - 激光回波的空间积分效应
+% 2. Spatial representativeness
+%    - Terrain variability within the footprint
+%    - Spatial integration effect of the laser return
 %
-% 3. 对比：CryoSat-2使用11×11邻域
-%    - CryoSat-2足迹 ~300m
-%    - 需要更大邻域匹配
+% 3. Comparison: CryoSat-2 uses an 11×11 neighborhood
+%    - CryoSat-2 footprint ~300 m
+%    - Requires a larger neighborhood for matching
 
 % 实现代码：
 neighbor_size = 3;
@@ -121,216 +121,216 @@ end
 nasadem_avg = ele / 9;
 
 %% ========================================================================
-%  六、质量控制策略
+%  VI. Quality-Control Strategy
 %  ========================================================================
 
-% 两步筛选策略：
+% Two-step filtering strategy:
 
-% 第一步：总体质量控制
-% - 删除 saturation_index > 255
-% - 删除 abs(dh) > 200m
+% Step 1: Overall quality control
+% - Remove saturation_index > 255
+% - Remove abs(dh) > 200 m
 
-% 第二步：统计中的条件筛选
-% 基础条件：
-%   - 时间范围内
-%   - 坡度 <= 40度
-%   - abs(曲率) < 4
+% Step 2: Conditional filters in statistics
+% Basic conditions:
+%   - Within the time window
+%   - Slope <= 40 degrees
+%   - abs(curvature) < 4
 %   - cloud_flag == 0
 
-% 两步筛选：
-%   Step 1: abs(dh) < 100m  （初步筛选）
-%   Step 2: abs(dh - median) < 50m  （相对中值筛选）
+% Two-step filtering:
+%   Step 1: abs(dh) < 100 m  (initial filter)
+%   Step 2: abs(dh - median) < 50 m  (median-relative filter)
 
-% 示例代码：
+% Example code:
 % row1 = find(base_conditions & abs(dh) < 100);
 % med = median(dh(row1));
 % row2 = find(base_conditions & abs(dh - med) < 50);
 % final_mean = mean(dh(row2));
 
 %% ========================================================================
-%  七、时间窗口定义
+%  VII. Definition of Time Windows
 %  ========================================================================
 
-% 1. 年度统计
-%    时间范围：从year-01-01到year+1-10-01
-%    例如：2003年数据 = 2003-01-01 到 2004-10-01
+% 1. Annual statistics
+%    Time window: from year-01-01 to year+1-10-01
+%    Example: 2003 data = 2003-01-01 to 2004-10-01
 %
-% 2. 3年滑动窗口
-%    时间范围：从year-01-01到year+3-01-01
-%    例如：2003-2005 = 2003-01-01 到 2006-01-01
+% 2. 3-year moving window
+%    Time window: from year-01-01 to year+3-01-01
+%    Example: 2003-2005 = 2003-01-01 to 2006-01-01
 %
-% 3. Campaign统计
-%    19个预定义的观测窗口
-%    例如：Campaign 1 = 2003-02-20 到 2003-03-29
+% 3. Campaign statistics
+%    19 predefined observation windows
+%    Example: Campaign 1 = 2003-02-20 to 2003-03-29
 
 campaigns = [
     2003.191781, datenum(2003,02,20)-datenum(2000,1,1), datenum(2003,03,29)-datenum(2000,1,1)+1;
     2003.810959, datenum(2003,09,25)-datenum(2000,1,1), datenum(2003,11,19)-datenum(2000,1,1)+1;
-    % ... 共19个
+    % ... total 19 windows
 ];
 
 %% ========================================================================
-%  八、区域分类系统
+%  VIII. Regional Classification System
 %  ========================================================================
 
-% ICESat处理中使用的区域分类：
+% Regional classifications used in ICESat processing:
 %
-% 1. HMA22 - 22个山地子区域
-%    - 基于山脉划分
-%    - 用于区域高程变化对比
+% 1. HMA22 - 22 mountain subregions
+%    - Based on mountain ranges
+%    - Used for comparing elevation changes across regions
 %
-% 2. GTN/RGI - 15个冰川区域
-%    - 基于RGI冰川清单
-%    - 用于冰川高程变化统计
+% 2. GTN/RGI - 15 glacier regions
+%    - Based on the RGI glacier inventory
+%    - Used for glacier elevation-change statistics
 %
-% 3. HMA4 - 4个大区域
-%    - 宏观区域划分
-%    - 用于大尺度分析
+% 3. HMA4 - 4 large regions
+%    - Macro-scale regional division
+%    - Used for large-scale analysis
 %
-% 4. HMA6 - 6个季节模式区域
-%    - 基于气候和季节特征
-%    - 用于季节性分析
+% 4. HMA6 - 6 seasonal-pattern regions
+%    - Based on climate and seasonal characteristics
+%    - Used for seasonal analysis
 %
-% 5. TP - 青藏高原标识
-%    - 0/1标识
-%    - 用于高原内外对比
+% 5. TP - Tibetan Plateau flag
+%    - 0/1 indicator
+%    - Used to compare inside vs outside the Plateau
 
 %% ========================================================================
-%  九、输出结果
+%  IX. Output Products
 %  ========================================================================
 
-% 1. 增强数据文件
+% 1. Enhanced data file
 %    HMA_ICESAT_rgiregion_update.txt
-%    - 28列数据
-%    - 包含NASADEM、区域标识、高程变化等
+%    - 28 columns
+%    - Includes NASADEM, region identifiers, elevation change, etc.
 %
-% 2. MAT格式结果
+% 2. MAT-format results
 %    ICESat_analysis_results.mat
-%    - results.annual: 年度统计
-%    - results.multiyear: 3年窗口统计
-%    - results.campaigns: Campaign统计
-%    - results.metadata: 元数据
+%    - results.annual: annual statistics
+%    - results.multiyear: 3-year window statistics
+%    - results.campaigns: campaign statistics
+%    - results.metadata: metadata
 %
-% 3. Excel格式结果
+% 3. Excel-format results
 %    - ICESat_yearly_results.xlsx
-%      * Sheet 1: year_value (高程变化值)
-%      * Sheet 2: year_count (数据点数)
-%      * Sheet 3: year_uncert (不确定性)
+%      * Sheet 1: year_value (elevation-change values)
+%      * Sheet 2: year_count (number of data points)
+%      * Sheet 3: year_uncert (uncertainty)
 %    
 %    - ICESat_3year_window_results.xlsx
-%      * 3年窗口统计结果
+%      * 3-year window statistics
 %    
 %    - ICESat_campaign_results.xlsx
-%      * 19个campaign的统计结果
+%      * Statistics for the 19 campaigns
 
 %% ========================================================================
-%  十、使用示例
+%  X. Usage Examples
 %  ========================================================================
 
-% 基本使用：
+% Basic usage:
 cd('revised_ICESat');
 run ICESat_Main_Processing_Pipeline.m
 
-% 自定义配置：
+% Custom configuration:
 config = load_icesat_config();
-config.quality.max_slope = 35;  % 修改坡度阈值
-config.temporal.start_year = 2004;  % 修改起始年份
+config.quality.max_slope = 35;  % Modify slope threshold
+config.temporal.start_year = 2004;  % Modify start year
 
-% 单独运行数据增强：
+% Run data enhancement only:
 config = load_icesat_config();
 input_file = 'G:\HMA\ICESat_Result\HMA_ICESat_rgiregion.txt';
 enhanced_data = enhance_icesat_data(input_file, config);
 
-% 单独运行统计分析：
+% Run statistical analysis only:
 config = load_icesat_config();
 enhanced_file = 'G:\HMA\ICESat_Result\HMA_ICESAT_rgiregion_update.txt';
 results = compute_icesat_statistics(enhanced_file, config);
 
 %% ========================================================================
-%  十一、常见问题与解决
+%  XI. Frequently Asked Questions (FAQ)
 %  ========================================================================
 
-% Q1: 为什么ICESat和CryoSat-2的经纬度列顺序不同？
-% A1: 这是历史原因，原始提取脚本的列定义不同。重构代码保持了原始顺序。
-%     ICESat: lat(列1), lon(列2)
-%     CryoSat-2: lon(列1), lat(列2)
+% Q1: Why do ICESat and CryoSat-2 use different longitude/latitude column orders?
+% A1: This is due to historical reasons: the original extraction scripts defined the columns differently. The refactored code preserves the original order.
+%     ICESat: lat (column 1), lon (column 2)
+%     CryoSat-2: lon (column 1), lat (column 2)
 
-% Q2: 如何处理缺失的原始数据？
-% A2: 如果没有GLA14原始数据：
-%     1. 使用已有的提取好的TXT文件
-%     2. 跳过extract_icesat_tracks步骤
-%     3. 直接从enhance_icesat_data开始
+% Q2: How should missing raw data be handled?
+% A2: If GLA14 raw data are not available:
+%     1. Use an already extracted TXT file
+%     2. Skip the extract_icesat_tracks step
+%     3. Start directly from enhance_icesat_data
 
-% Q3: 为什么使用列22而不是列25进行统计？
-% A3: 列22是初步高程变化（不含pdd），更直接反映表面变化。
-%     列25包含pdd校正，主要用于穿透深度分析。
+% Q3: Why use column 22 instead of column 25 for statistics?
+% A3: Column 22 is the initial elevation change (without PDD), which more directly reflects surface change.
+%     Column 25 includes the PDD correction and is mainly used for penetration-depth analysis.
 
-% Q4: Campaign时间窗口可以修改吗？
-% A4: 可以，在config.temporal.campaigns中修改。
-%     但建议使用预定义的19个窗口，这是ICESat的标准观测周期。
+% Q4: Can the campaign time windows be modified?
+% A4: Yes, they can be changed in config.temporal.campaigns.
+%     However, it is recommended to use the predefined 19 windows, which correspond to the standard ICESat observation periods.
 
 %% ========================================================================
-%  十二、参考文献
+%  XII. References
 %  ========================================================================
 
-% 1. ICESat数据产品
+% 1. ICESat data products
 %    Zwally, H. J., et al. (2014). GLAS/ICESat L2 Global Land Surface
 %    Altimetry Data (GLA14), Version 34. NASA NSIDC DAAC.
 %
-% 2. 重构参考代码
-%    - revised_CryoSat2/: CryoSat-2重构代码
-%    - HMA_ICESat_COMPUTE_20230603.m: 原始统计代码
-%    - HMA_footprint_track_20230213.m: 数据增强参考
+% 2. Refactored reference code
+%    - revised_CryoSat2/: refactored CryoSat-2 code
+%    - HMA_ICESat_COMPUTE_20230603.m: original statistics code
+%    - HMA_footprint_track_20230213.m: data enhancement reference
 %
-% 3. DEM数据
+% 3. DEM data
 %    NASA JPL (2020). NASADEM Merged DEM Global 1 arc second V001.
 %
-% 4. 冰川清单
+% 4. Glacier inventory
 %    RGI Consortium (2017). Randolph Glacier Inventory - A Dataset
 %    of Global Glacier Outlines, Version 6.
 
 %% ========================================================================
-%  十三、版本历史
+%  XIII. Version History
 %  ========================================================================
 
 % v1.0 (2025-10-18)
-% - 初始版本
-% - 完成核心处理流程
-% - 参照CryoSat-2重构结构
-% - 实现3×3邻域NASADEM处理
-% - 实现年度/3年窗口/Campaign统计
+% - Initial version
+% - Core processing workflow completed
+% - Refactored structure based on CryoSat-2
+% - Implemented 3×3 NASADEM neighborhood processing
+% - Implemented annual / 3-year window / campaign statistics
 
 %% ========================================================================
-%  十四、待扩展功能
+%  XIV. Planned Extensions
 %  ========================================================================
 
-% 1. 高程带分析
-%    - 50m或100m高程带
-%    - 不同高程带的高程变化
-%    - 季节性高程带分析
+% 1. Elevation-band analysis
+%    - 50 m or 100 m elevation bands
+%    - Elevation change in different bands
+%    - Seasonal elevation-band analysis
 %
-% 2. 空间网格统计
-%    - 0.5°或1°网格
-%    - 网格化高程变化趋势
+% 2. Spatial grid statistics
+%    - 0.5° or 1° grids
+%    - Gridded elevation-change trends
 %
-% 3. 可视化功能
-%    - 空间分布图
-%    - 时间序列图
-%    - 区域对比图
+% 3. Visualization capabilities
+%    - Spatial distribution maps
+%    - Time-series plots
+%    - Regional comparison plots
 %
-% 4. 与其他数据对比
-%    - 与CryoSat-2数据衔接
-%    - 与DEM差分对比
-%    - 与地面测量验证
+% 4. Comparison with other datasets
+%    - Linkage with CryoSat-2 data
+%    - DEM differencing comparisons
+%    - Validation with in-situ measurements
 
 %% ========================================================================
-%  十五、致谢
+%  XV. Acknowledgements
 %  ========================================================================
 
-% 感谢原始代码开发者
-% 感谢CryoSat-2重构代码提供的参考框架
-% 感谢NSIDC提供的ICESat数据产品
+% Thanks to the original code developers
+% Thanks to the refactored CryoSat-2 code for providing a reference framework
+% Thanks to NSIDC for providing the ICESat data products
 
-fprintf('ICESat数据处理流程文档加载完成\n');
-fprintf('详细使用说明请参考 README.md 和 数据列定义说明.md\n');
+fprintf('ICESat data processing workflow documentation loaded.\n');
+fprintf('For detailed usage instructions please refer to README.md and Data_Column_Description.md\n');
 

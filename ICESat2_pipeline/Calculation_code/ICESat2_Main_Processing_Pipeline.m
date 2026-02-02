@@ -1,106 +1,108 @@
-%% ICESat-2数据处理主流程脚本
-% 
-% 功能：高亚洲山地（HMA）ICESat-2数据完整处理流程
-% 作者：重构版本
-% 日期：2025年
-% 
-% 处理流程：
-% 1. 原始数据提取与轨道处理
-% 2. 数据后处理与质量增强  
-% 3. 统计分析与计算
-% 4. 可视化与结果输出
+--- START OF FILE ICESat2_Main_Processing_Pipeline.m ---
 
-%% 初始化和配置设置
+%% ICESat-2 Data Processing Main Pipeline Script
+% 
+% Function: Complete processing pipeline for High Mountain Asia (HMA) ICESat-2 data
+% Author: Refactored Version
+% Date: 2025
+% 
+% Processing Steps:
+% 1. Raw data extraction and track processing
+% 2. Data post-processing and quality enhancement  
+% 3. Statistical analysis and calculation
+% 4. Visualization and result output
+
+%% Initialization and Configuration Settings
 clear; clc; close all;
 
-% 添加函数路径
+% Add function paths
 addpath('functions');
 
-% 加载配置参数
+% Load configuration parameters
 config = load_processing_config();
 
-fprintf('=== ICESat-2 数据处理流程开始 ===\n');
-fprintf('配置加载完成，开始数据处理...\n\n');
+fprintf('=== ICESat-2 Data Processing Pipeline Started ===\n');
+fprintf('Configuration loaded, starting data processing...\n\n');
 
-%% 第一阶段：原始数据提取与轨道处理
+%% Phase 1: Raw Data Extraction and Track Processing
 % 
-% 从ICESat-2 ATL06 v6 HDF5文件中提取轨道数据，进行空间过滤和区域标识
+% Extract track data from ICESat-2 ATL06 v6 HDF5 files, perform spatial filtering and region identification
 
-fprintf('--- 第一阶段：原始数据提取与轨道处理 ---\n');
+fprintf('--- Phase 1: Raw Data Extraction and Track Processing ---\n');
 
-% 检查输入数据路径
+% Check input data path
 if ~exist(config.paths.input_h5_dir, 'dir')
-    error('输入HDF5数据目录不存在: %s', config.paths.input_h5_dir);
+    error('Input HDF5 data directory does not exist: %s', config.paths.input_h5_dir);
 end
 
-% 执行轨道数据提取
+% Execute track data extraction
 try
     track_data = extract_icesat2_tracks(config);
-    fprintf('✓ 轨道数据提取完成，共处理 %d 个数据点\n', size(track_data, 1));
+    fprintf('✓ Track data extraction completed, processed %d data points\n', size(track_data, 1));
     
-    % 保存中间结果
+    % Save intermediate results
     csv_output = fullfile(config.paths.output_dir, config.files.track_csv);
     writematrix(track_data, csv_output);
-    fprintf('✓ 数据已保存至: %s\n\n', csv_output);
+    fprintf('✓ Data saved to: %s\n\n', csv_output);
     
 catch ME
-    fprintf('❌ 轨道数据提取失败: %s\n', ME.message);
+    fprintf('❌ Track data extraction failed: %s\n', ME.message);
     return;
 end
 
-%% 第二阶段：数据后处理与质量增强
+%% Phase 2: Data Post-processing and Quality Enhancement
 % 
-% 添加地形信息、穿透深度校正，计算最终高程变化
+% Add terrain information, penetration depth correction, and calculate final elevation change
 
-fprintf('--- 第二阶段：数据后处理与质量增强 ---\n');
+fprintf('--- Phase 2: Data Post-processing and Quality Enhancement ---\n');
 
 try
-    % 加载第一阶段数据
+    % Load Phase 1 data
     csv_file = fullfile(config.paths.output_dir, config.files.track_csv);
     enhanced_data = enhance_icesat2_data(csv_file, config);
     
-    fprintf('✓ 地形信息添加完成\n');
-    fprintf('✓ 穿透深度校正完成\n');
-    fprintf('✓ 高程变化计算完成\n');
+    fprintf('✓ Terrain information added\n');
+    fprintf('✓ Penetration depth correction completed\n');
+    fprintf('✓ Elevation change calculation completed\n');
     
-    % 保存增强后的数据
+    % Save enhanced data
     txt_output = fullfile(config.paths.output_dir, config.files.enhanced_txt);
     writematrix(enhanced_data, txt_output);
-    fprintf('✓ 增强数据已保存至: %s\n\n', txt_output);
+    fprintf('✓ Enhanced data saved to: %s\n\n', txt_output);
     
 catch ME
-    fprintf('❌ 数据后处理失败: %s\n', ME.message);
+    fprintf('❌ Data post-processing failed: %s\n', ME.message);
     return;
 end
 
-%% 第三阶段：统计分析与计算
+%% Phase 3: Statistical Analysis and Calculation
 % 
-% 进行多时间尺度、多空间尺度的统计分析
+% Perform multi-temporal and multi-spatial scale statistical analysis
 
-fprintf('--- 第三阶段：统计分析与计算 ---\n');
+fprintf('--- Phase 3: Statistical Analysis and Calculation ---\n');
 
 try
-    % 加载增强后的数据
+    % Load enhanced data
     txt_file = fullfile(config.paths.output_dir, config.files.enhanced_txt);
     
-    % 执行统计分析
+    % Execute statistical analysis
     results = compute_icesat2_statistics(txt_file, config);
     
-    fprintf('✓ 时间序列分析完成\n');
-    fprintf('✓ 空间统计分析完成\n');
-    fprintf('✓ 高程带分析完成\n');
-    fprintf('✓ 面积加权计算完成\n');
+    fprintf('✓ Time series analysis completed\n');
+    fprintf('✓ Spatial statistical analysis completed\n');
+    fprintf('✓ Elevation band analysis completed\n');
+    fprintf('✓ Area-weighted calculation completed\n');
     
-    % 保存分析结果
+    % Save analysis results
     results_file = fullfile(config.paths.output_dir, 'ICESat2_analysis_results.mat');
     save(results_file, 'results', '-v7.3');
-    fprintf('✓ 分析结果已保存至: %s\n\n', results_file);
+    fprintf('✓ Analysis results saved to: %s\n\n', results_file);
     
 catch ME
-    fprintf('❌ 统计分析失败: %s\n', ME.message);
+    fprintf('❌ Statistical analysis failed: %s\n', ME.message);
     return;
 end
-%% 季节结果保存为excel
+%% Save seasonal results to Excel
 gtn = shaperead(config.files.gtn_regions);
 hma22 = shaperead(config.files.hma22_regions);
 header = {'days','HMA', gtn.fullname, hma22.Name, 'TP'};
@@ -124,7 +126,7 @@ numeric_data = [results.area_weighted_season.mid_days, results.area_weighted_sea
 data_as_cell = num2cell(numeric_data);
 output_data = [header; data_as_cell];
 writecell(output_data, season_file, 'Sheet', 'month_uncert');
-%% 年结果保存为excel
+%% Save yearly results to Excel
 header = {'start_year', 'end_year(not included)', 'HMA', gtn.fullname, hma22.Name, 'TP'};
 for i = 1:496
     header{length(header)+1} = i;
@@ -147,7 +149,7 @@ data_as_cell = num2cell(numeric_data);
 output_data = [header; data_as_cell];
 writecell(output_data, year_file, 'Sheet', 'year_uncert');
 
-%% 输出各个区域的高度带结果：ele_bands * year
+%% Output elevation band results for each region: ele_bands * year
 all_region_names = {'HMA', gtn.fullname, hma22.Name, 'TP'};
 for i = 1:length(all_region_names)
     region_name = all_region_names{i};
@@ -169,7 +171,7 @@ for i = 1:length(all_region_names)
     end
     
     output_data = [header; data_as_cell];
-    save_path = fullfile(config.paths.ele_band_dir, ['【', num2str(i),'】',region_name, '.xlsx']);
+    save_path = fullfile(config.paths.ele_band_dir, ['[', num2str(i),']',region_name, '.xlsx']);
     writecell(output_data, save_path, 'Sheet', 'ele_band_value');
 
     data_3d = results.elevation_bands.counts_year(:, i, :);
@@ -187,23 +189,23 @@ for i = 1:length(all_region_names)
     writecell(output_data, save_path, 'Sheet', 'ele_band_uncert');
 end
 
-%% 可选：生成处理报告
+%% Optional: Generate Processing Report
 % 
-% 生成详细的处理报告文档
+% Generate detailed processing report document
 
 if config.options.generate_report
-    fprintf('\n--- 生成处理报告 ---\n');
+    fprintf('\n--- Generating Processing Report ---\n');
     
     try
         report_file = generate_processing_report(results, config);
-        fprintf('✓ 处理报告已生成: %s\n', report_file);
+        fprintf('✓ Processing report generated: %s\n', report_file);
     catch ME
-        fprintf('❌ 报告生成失败: %s\n', ME.message);
+        fprintf('❌ Report generation failed: %s\n', ME.message);
     end
 end
 
-%% 清理和资源释放
+%% Cleanup and Resource Release
 
-fprintf('\n清理临时变量...\n');
+fprintf('\nCleaning up temporary variables...\n');
 clear track_data enhanced_data;
-fprintf('流程结束。\n');
+fprintf('Pipeline ended.\n');

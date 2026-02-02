@@ -1,116 +1,118 @@
-%% ICESat数据处理主流程脚本
-%
-% 参考：HMA_ICESat_COMPUTE_20230603.m + revised_CryoSat2/CryoSat2_Main_Processing_Pipeline.m
-%
-% 功能：高亚洲山地（HMA）ICESat数据完整处理流程
-% 重构版本：v1.0
-% 数据时间：2003-2009年
-%
-% 关键差异：ICESat使用3×3邻域平均NASADEM（vs CryoSat-2的11×11）
-%
-% 处理流程：
-% 1. 原始数据提取（ICESat二进制 → TXT） - 需要手动运行或已有数据
-% 2. 数据增强（3×3邻域NASADEM + 区域标识）
-% 3. 统计分析（年度/3年窗口/Campaign）
-% 4. 结果输出
+--- START OF FILE ICESat_Main_Processing_Pipeline.m ---
 
-%% 初始化
+%% ICESat Data Processing Main Pipeline Script
+%
+% Reference: HMA_ICESat_COMPUTE_20230603.m + revised_CryoSat2/CryoSat2_Main_Processing_Pipeline.m
+%
+% Function: Complete processing pipeline for High Mountain Asia (HMA) ICESat data
+% Refactored Version: v1.0
+% Data Period: 2003-2009
+%
+% Key Difference: ICESat uses 3x3 neighborhood average NASADEM (vs CryoSat-2's 11x11)
+%
+% Processing Steps:
+% 1. Raw Data Extraction (ICESat binary -> TXT) - Manual run or existing data required
+% 2. Data Enhancement (3x3 neighborhood NASADEM + Region ID)
+% 3. Statistical Analysis (Annual / 3-year window / Campaign)
+% 4. Result Output
+
+%% Initialization
 clear; clc; close all;
 
-% 添加函数路径
+% Add function paths
 addpath('functions');
 
-% 加载配置
+% Load configuration
 config = load_icesat_config();
 
-fprintf('=== ICESat 数据处理流程开始 ===\n');
-fprintf('重要提示：ICESat使用3×3邻域平均NASADEM\n');
-fprintf('数据时间范围：2003-2009年\n');
-fprintf('配置加载完成，开始数据处理...\n\n');
+fprintf('=== ICESat Data Processing Pipeline Started ===\n');
+fprintf('Important Note: ICESat uses 3x3 neighborhood average NASADEM\n');
+fprintf('Data Time Range: 2003-2009\n');
+fprintf('Configuration loaded, starting data processing...\n\n');
 
-%% 第一阶段：原始数据提取
+%% Phase 1: Raw Data Extraction
 %
-% 注意：ICESat原始数据提取通常需要从GLA14二进制文件中提取
-% 如果已有提取好的TXT文件，可以跳过此步骤
+% Note: ICESat raw data extraction usually requires extraction from GLA14 binary files.
+% If extracted TXT files already exist, this step can be skipped.
 %
-% 此处假设已有文件：HMA_ICESat_rgiregion.txt
+% Assuming existing file: HMA_ICESat_rgiregion.txt
 
-fprintf('--- 第一阶段：原始数据提取 ---\n');
+fprintf('--- Phase 1: Raw Data Extraction ---\n');
 
 track_txt_path = fullfile(config.paths.output_dir, config.files.track_txt);
 
 if ~exist(track_txt_path, 'file')
-    warning('未找到原始数据文件: %s\n', track_txt_path);
+    warning('Raw data file not found: %s\n', track_txt_path);
     [track_data, track_data_outrgi] = extract_icesat_tracks(config);
     dlmwrite(track_txt_path, track_data, 'precision', 10);
 
     dlmwrite(fullfile(config.paths.output_dir, 'HMA_ICESat_norgiregion.txt'), track_data_outrgi, 'precision', 10);
 
-    fprintf('完成ICESat冰川数据提取至 %s\n\n', track_txt_path);
+    fprintf('ICESat glacier data extraction completed to %s\n\n', track_txt_path);
 else
-    fprintf('✓ 找到原始数据文件\n');
-    fprintf('文件路径: %s\n\n', track_txt_path);
+    fprintf('✓ Raw data file found\n');
+    fprintf('File path: %s\n\n', track_txt_path);
 end
 
-%% 第二阶段：数据增强
+%% Phase 2: Data Enhancement
 %
-% 关键步骤：使用3×3邻域平均NASADEM（ICESat特有）
-% 添加网格、坡度、区域标识，计算高程变化
+% Key Step: Use 3x3 neighborhood average NASADEM (Specific to ICESat)
+% Add grid, slope, region IDs, calculate elevation change
 
-fprintf('--- 第二阶段：数据增强（3×3邻域NASADEM） ---\n');
+fprintf('--- Phase 2: Data Enhancement (3x3 NASADEM) ---\n');
 
 enhanced_txt_path = fullfile(config.paths.output_dir, config.files.enhanced_txt);
 
 if exist(enhanced_txt_path, 'file') && ~config.options.save_intermediate
-    fprintf('检测到已存在的增强数据文件，跳过增强步骤\n');
-    fprintf('文件路径: %s\n\n', enhanced_txt_path);
+    fprintf('Existing enhanced data file detected, skipping enhancement step\n');
+    fprintf('File path: %s\n\n', enhanced_txt_path);
 else
     enhanced_data = enhance_icesat_data(track_txt_path, config);
     
-    fprintf('✓ 地形参数添加完成（3×3邻域）：NASADEM、slope、aspect\n');
-    fprintf('✓ h_li2000计算完成\n');
-    fprintf('✓ pdd校正添加完成\n');
-    fprintf('✓ 高程变化计算完成（dh和dh_with_pdd）\n');
-    fprintf('✓ 区域标识完成（HMA4, HMA6, TP）\n');
+    fprintf('✓ Terrain parameters added (3x3 neighborhood): NASADEM, slope, aspect\n');
+    fprintf('✓ h_li2000 calculation completed\n');
+    fprintf('✓ PDD correction added\n');
+    fprintf('✓ Elevation change calculation completed (dh and dh_with_pdd)\n');
+    fprintf('✓ Region identification completed (HMA4, HMA6, TP)\n');
     
-    % 保存
+    % Save
     if config.options.save_intermediate
         dlmwrite(enhanced_txt_path, enhanced_data, 'precision', 10);
-        fprintf('✓ 增强数据已保存至: %s\n', enhanced_txt_path);
+        fprintf('✓ Enhanced data saved to: %s\n', enhanced_txt_path);
     end
 end
 
 fprintf('\n');
 
-%% 第三阶段：统计分析
+%% Phase 3: Statistical Analysis
 %
-% 多时间尺度统计分析：
-% - 年度统计（2003-2009，每年到次年10月）
-% - 3年滑动窗口
-% - Campaign统计（19个观测窗口）
+% Multi-temporal scale statistical analysis:
+% - Annual statistics (2003-2009, each year to next October)
+% - 3-year sliding window
+% - Campaign statistics (19 observation windows)
 
-fprintf('--- 第三阶段：统计分析 ---\n');
+fprintf('--- Phase 3: Statistical Analysis ---\n');
 
 results = compute_icesat_statistics(enhanced_txt_path, config);
 
-fprintf('✓ 年度统计分析完成（2003-2009）\n');
-fprintf('✓ 3年滑动窗口统计完成\n');
-fprintf('✓ Campaign统计完成（19个观测窗口）\n');
+fprintf('✓ Annual statistical analysis completed (2003-2009)\n');
+fprintf('✓ 3-year sliding window statistics completed\n');
+fprintf('✓ Campaign statistics completed (19 observation windows)\n');
 
-% 保存结果
+% Save results
 results_file = fullfile(config.paths.output_dir, config.files.results_mat);
 save(results_file, 'results', '-v7.3');
-fprintf('✓ 分析结果已保存至: %s\n', results_file);
+fprintf('✓ Analysis results saved to: %s\n', results_file);
 
 fprintf('\n');
 
-%% 第四阶段：结果导出为Excel
+%% Phase 4: Result Export to Excel
 %
-% 将统计结果导出为Excel文件，便于后续分析
+% Export statistical results to Excel files for further analysis
 
-fprintf('--- 第四阶段：结果导出 ---\n');
+fprintf('--- Phase 4: Result Export ---\n');
 
-%% 季节结果保存为excel
+%% Save seasonal results to Excel
 gtn = shaperead(config.files.gtn_regions);
 hma22 = shaperead(config.files.hma22_regions);
 header = {'start_day', 'end_day', 'mid_day', 'HMA', gtn.fullname, hma22.Name, 'TP'};
@@ -134,7 +136,7 @@ numeric_data = [results.elevation_bands.time_windows(:,2:3), results.area_weight
 data_as_cell = num2cell(numeric_data);
 output_data = [header; data_as_cell];
 writecell(output_data, season_file, 'Sheet', 'campaign_uncert');
-%% 年结果保存为excel
+%% Save yearly results to Excel
 header = {'start_year', 'end_year(not included)', 'HMA', gtn.fullname, hma22.Name, 'TP'};
 for i = 1:496
     header{length(header)+1} = i;
@@ -157,7 +159,7 @@ data_as_cell = num2cell(numeric_data);
 output_data = [header; data_as_cell];
 writecell(output_data, year_file, 'Sheet', 'year_uncert');
 
-%% 输出各个区域的高度带结果：ele_bands * year
+%% Output elevation band results for each region: ele_bands * year
 all_region_names = {'HMA', gtn.fullname, hma22.Name, 'TP'};
 for i = 1:length(all_region_names)
     region_name = all_region_names{i};
@@ -197,72 +199,71 @@ for i = 1:length(all_region_names)
     writecell(output_data, save_path, 'Sheet', 'ele_band_uncert');
 end
 
-%% 处理完成总结
+%% Processing Completion Summary
 
-fprintf('=== ICESat 数据处理流程完成 ===\n\n');
+fprintf('=== ICESat Data Processing Pipeline Completed ===\n\n');
 
-% 显示处理摘要
+% Display processing summary
 display_processing_summary(results, config);
 
-fprintf('\n所有输出文件已保存在: %s\n', config.paths.output_dir);
-fprintf('处理流程执行完毕。\n');
+fprintf('\nAll output files saved in: %s\n', config.paths.output_dir);
+fprintf('Processing pipeline finished.\n');
 
-%% 清理
-fprintf('\n清理临时变量...\n');
+%% Cleanup
+fprintf('\nCleaning up temporary variables...\n');
 clear enhanced_data;
-fprintf('流程结束。\n');
+fprintf('Pipeline ended.\n');
 
-%% 辅助函数
+%% Helper Functions
 
 function display_processing_summary(results, config)
-% DISPLAY_PROCESSING_SUMMARY 显示处理摘要
+% DISPLAY_PROCESSING_SUMMARY Displays processing summary
 
-fprintf('--- 处理摘要 ---\n');
+fprintf('--- Processing Summary ---\n');
 
-% 数据信息
+% Data Information
 if isfield(results, 'metadata')
-    fprintf('数据信息:\n');
-    fprintf('  原始数据点数: %d\n', results.metadata.data_points_original);
-    fprintf('  质量控制后: %d\n', results.metadata.data_points_qc);
-    fprintf('  数据保留率: %.1f%%\n', ...
+    fprintf('Data Information:\n');
+    fprintf('  Original data points: %d\n', results.metadata.data_points_original);
+    fprintf('  After Quality Control: %d\n', results.metadata.data_points_qc);
+    fprintf('  Data retention rate: %.1f%%\n', ...
         100 * results.metadata.data_points_qc / results.metadata.data_points_original);
 end
 
-% 年度统计
+% Annual Statistics
 if isfield(results, 'annual')
-    fprintf('\n年度统计:\n');
-    fprintf('  处理年份: %d - %d\n', config.temporal.start_year, config.temporal.end_year);
+    fprintf('\nAnnual Statistics:\n');
+    fprintf('  Processing years: %d - %d\n', config.temporal.start_year, config.temporal.end_year);
     
-    % HMA整体趋势
+    % HMA Overall Trend
     valid = ~isnan(results.annual.values(:,1));
     if sum(valid) > 1
         years = results.annual.year_label;
         dh = results.annual.values(valid, 1);
         p = polyfit(years, dh, 1);
-        fprintf('  HMA整体趋势: %.3f m/yr\n', p(1));
-        fprintf('  平均数据点数: %.0f 点/年\n', mean(results.annual.counts(valid, 1)));
+        fprintf('  HMA Overall Trend: %.3f m/yr\n', p(1));
+        fprintf('  Average data points: %.0f points/year\n', mean(results.annual.counts(valid, 1)));
     end
 end
 
-% 3年窗口统计
+% 3-Year Window Statistics
 if isfield(results, 'multiyear')
-    fprintf('\n3年窗口统计:\n');
-    fprintf('  窗口数: %d\n', size(results.multiyear.values, 1));
+    fprintf('\n3-Year Window Statistics:\n');
+    fprintf('  Number of windows: %d\n', size(results.multiyear.values, 1));
 end
 
-% Campaign统计
+% Campaign Statistics
 if isfield(results, 'campaigns')
-    fprintf('\nCampaign统计:\n');
-    fprintf('  观测窗口数: %d\n', size(results.campaigns.values, 1));
+    fprintf('\nCampaign Statistics:\n');
+    fprintf('  Number of observation windows: %d\n', size(results.campaigns.values, 1));
 end
 
-% 处理时间
+% Processing Time
 if isfield(results, 'metadata')
-    fprintf('\n处理信息:\n');
-    fprintf('  处理时间: %s\n', results.metadata.processing_date);
+    fprintf('\nProcessing Information:\n');
+    fprintf('  Processing Date: %s\n', results.metadata.processing_date);
 end
 
 fprintf('\n');
 
 end
-
